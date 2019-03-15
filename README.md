@@ -2,7 +2,7 @@
 PowerShell module for the Vssadmin utility
 
 ### Table of Contents
-  * [Command \-\> Function Lookup](#command-function-lookup)
+  * [Command \-\> Function Lookup](#command---function-lookup)
   * [Examples](#examples)
 
 ### Command \-\> Function Lookup
