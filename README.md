@@ -30,11 +30,11 @@ PS> Get-VssWriter | Where-Object {$_.State -like 'Failed*'} | Get-VssWriterServi
 ##### Example \#3
 Update the MaxSize for a ShadowCopy storage association to 5%
 ```PowerShell
-PS> Get-VssShadowStorage -ForVolum C: | Resize-VssShadowStorage -NewSize 5 -As %
+PS> Get-VssShadowStorage -ForVolume C: | Resize-VssShadowStorage -NewSize 5 -As %
 ```
 Update the MaxSize to UNBOUNDED
 ```PowerShell
-PS> Get-VssShadowStorage -ForVolum C: | Resize-VssShadowStorage -Unbounded
+PS> Get-VssShadowStorage -ForVolume C: | Resize-VssShadowStorage -Unbounded
 ```
 
 ##### Example \#4
