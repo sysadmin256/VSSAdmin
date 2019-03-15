@@ -1,0 +1,216 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Configuration>
+<ViewDefinitions>
+<View>
+	<Name>VssWriter-Table</Name>
+	<ViewSelectedBy>
+		<TypeName>Microsoft.VssAdmin.VssWriter</TypeName>
+	</ViewSelectedBy>
+	<TableControl>		
+		<TableHeaders>
+			<TableColumnHeader>
+			</TableColumnHeader>
+			<TableColumnHeader>
+			</TableColumnHeader>
+			<TableColumnHeader>
+			</TableColumnHeader>
+			<TableColumnHeader>
+			</TableColumnHeader>
+		</TableHeaders>
+		<TableRowEntries>
+			<TableRowEntry>
+				<TableColumnItems>
+					<TableColumnItem>
+						<PropertyName>Name</PropertyName>
+					</TableColumnItem>
+					<TableColumnItem>
+						<PropertyName>State</PropertyName>
+                        <!-- <FormatString>({0:d}) {0}</FormatString> -->
+					</TableColumnItem>
+					<TableColumnItem>
+						<PropertyName>LastError</PropertyName>						
+					</TableColumnItem>
+					<TableColumnItem>
+						<PropertyName>Id</PropertyName>
+					</TableColumnItem>
+				</TableColumnItems>
+			</TableRowEntry>
+		</TableRowEntries>
+        <AutoSize/>
+	</TableControl>
+</View>
+<View>
+	<Name>VssProvider</Name>
+	<ViewSelectedBy>
+		<TypeName>Microsoft.VssAdmin.VssProvider</TypeName>
+	</ViewSelectedBy>
+	<TableControl>		
+		<TableHeaders>
+			<TableColumnHeader>
+			</TableColumnHeader>
+			<TableColumnHeader>
+                <Label>Type</Label>
+			</TableColumnHeader>
+			<TableColumnHeader>
+			</TableColumnHeader>
+			<TableColumnHeader>
+			</TableColumnHeader>
+		</TableHeaders>
+		<TableRowEntries>
+			<TableRowEntry>
+				<TableColumnItems>
+					<TableColumnItem>
+						<PropertyName>Name</PropertyName>
+					</TableColumnItem>
+					<TableColumnItem>
+						<PropertyName>ProviderType</PropertyName>                        
+					</TableColumnItem>
+					<TableColumnItem>
+						<PropertyName>Version</PropertyName>						
+					</TableColumnItem>
+					<TableColumnItem>
+						<PropertyName>Id</PropertyName>
+					</TableColumnItem>
+				</TableColumnItems>
+			</TableRowEntry>
+		</TableRowEntries>
+        <AutoSize/>
+	</TableControl>
+</View>
+<View>
+	<Name>VssShadowStorage</Name>
+	<ViewSelectedBy>
+		<TypeName>Microsoft.VssAdmin.VssShadowStorage</TypeName>
+	</ViewSelectedBy>
+	<ListControl>		
+		<ListEntries>
+			<ListEntry>
+				<ListItems>
+					<ListItem>
+						<PropertyName>ForVolume</PropertyName>
+					</ListItem>
+					<ListItem>
+						<PropertyName>StorageVolume</PropertyName>                        
+					</ListItem>
+					<ListItem>
+						<Label>Used</Label>						
+						<ScriptBlock>
+							function Get-FriendlySize {
+								param(									
+									[psobject]$Value
+								)
+
+								if ($Value.Bytes -ge 1GB) {								
+									return "{0,5:00.00} {1,-2} ({2,3:P1})" -f ($Value.Bytes / 1GB), 'GB', $Value.Percentage
+								} elseif ($Value.Bytes -ge 1MB) {								
+									return "{0,5:00.00} {1,-2} ({2,3:P1})" -f ($Value.Bytes / 1MB), 'MB', $Value.Percentage
+								} elseif ($Value.Bytes -ge 1KB) {								
+									return "{0,5:00.00} {1,-2} ({2,3:P1})" -f ($Value.Bytes / 1KB), 'KB', $Value.Percentage
+								} else {							
+									return "{0,5:00.00} {1,-2} ({2,3:P1})" -f ($Value.Bytes), 'B', $Value.Percentage
+								} 
+							}
+
+							return Get-FriendlySize $_.UsedStorageSpace						
+						</ScriptBlock>
+					</ListItem>
+					<ListItem>
+						<Label>Allocated</Label>
+						<ScriptBlock>
+							function Get-FriendlySize {
+								param(									
+									[psobject]$Value
+								)
+
+								if ($Value.Bytes -ge 1GB) {								
+									return "{0,5:00.00} {1,-2} ({2,3:P1})" -f ($Value.Bytes / 1GB), 'GB', $Value.Percentage
+								} elseif ($Value.Bytes -ge 1MB) {								
+									return "{0,5:00.00} {1,-2} ({2,3:P1})" -f ($Value.Bytes / 1MB), 'MB', $Value.Percentage
+								} elseif ($Value.Bytes -ge 1KB) {								
+									return "{0,5:00.00} {1,-2} ({2,3:P1})" -f ($Value.Bytes / 1KB), 'KB', $Value.Percentage
+								} else {							
+									return "{0,5:00.00} {1,-2} ({2,3:P1})" -f ($Value.Bytes), 'B', $Value.Percentage
+								} 
+							}	
+
+							return Get-FriendlySize $_.AllocatedStorageSpace
+						</ScriptBlock>																			
+					</ListItem>
+					<ListItem>
+						<Label>Maximum</Label>
+						<ScriptBlock> 
+							function Get-FriendlySize {
+								param(									
+									[psobject]$Value
+								)
+
+								if ($Value.Bytes -ge 1GB) {								
+									return "{0,5:00.00} {1,-2} ({2,3:P1})" -f ($Value.Bytes / 1GB), 'GB', $Value.Percentage
+								} elseif ($Value.Bytes -ge 1MB) {								
+									return "{0,5:00.00} {1,-2} ({2,3:P1})" -f ($Value.Bytes / 1MB), 'MB', $Value.Percentage
+								} elseif ($Value.Bytes -ge 1KB) {								
+									return "{0,5:00.00} {1,-2} ({2,3:P1})" -f ($Value.Bytes / 1KB), 'KB', $Value.Percentage
+								} else {							
+									return "{0,5:00.00} {1,-2} ({2,3:P1})" -f ($Value.Bytes), 'B', $Value.Percentage
+								} 
+							}	
+
+							if ($_.MaximumStorageSpace.Bytes -eq -1) {
+								return "UNBOUNDED ({0:P0})" -f $_.MaximumStorageSpace.Percentage
+							} else {							
+								return Get-FriendlySize -Value $_.MaximumStorageSpace
+							}
+						</ScriptBlock>						
+					</ListItem>
+				</ListItems>
+			</ListEntry>
+		</ListEntries>
+	</ListControl>
+</View>
+<View>
+	<Name>VssShadowCopy</Name>
+	<ViewSelectedBy>
+		<TypeName>Microsoft.VssAdmin.VssShadowCopy</TypeName>
+	</ViewSelectedBy>
+	<ListControl>		
+		<ListEntries>
+			<ListEntry>
+				<ListItems>
+					<ListItem>
+						<PropertyName>SetId</PropertyName>
+					</ListItem>
+					<ListItem>
+						<PropertyName>CreationTime</PropertyName>                        
+					</ListItem>
+					<ListItem>
+						<PropertyName>ShadowCopyId</PropertyName>                        
+					</ListItem>
+					<ListItem>
+						<PropertyName>OriginalVolume</PropertyName>                        
+					</ListItem>
+					<ListItem>
+						<PropertyName>ShadowCopyVolume</PropertyName>                        
+					</ListItem>
+					<ListItem>
+						<PropertyName>OriginatingMachine</PropertyName>                        
+					</ListItem>
+					<ListItem>
+						<PropertyName>ServiceMachine</PropertyName>                        
+					</ListItem>
+					<ListItem>
+						<Label>Provider</Label>                        
+                        <ScriptBlock>$_.Provider.Name</ScriptBlock>
+					</ListItem>
+					<ListItem>
+						<PropertyName>Context</PropertyName>                        
+					</ListItem>
+					<ListItem>
+						<PropertyName>Attributes</PropertyName>                        
+					</ListItem>
+				</ListItems>
+			</ListEntry>
+		</ListEntries>
+	</ListControl>
+</View>
+</ViewDefinitions>
+</Configuration>

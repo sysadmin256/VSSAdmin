@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<LookupTable>
+  <Record WriterName="ASR Writer" ServiceName="VSS" />
+  <Record WriterName="BITS Writer" ServiceName="BITS" />
+  <Record WriterName="Certificate Authority" ServiceName="CertSvc" />
+  <Record WriterName="COM+ REGDB Writer" ServiceName="VSS" />
+  <Record WriterName="DFS Replication service writer" ServiceName="DFSR" />
+  <Record WriterName="DHCP Jet Writer" ServiceName="DHCPServer" />
+  <Record WriterName="FRS Writer" ServiceName="NtFrs" />
+  <Record WriterName="FSRM writer" ServiceName="srmsvc" />
+  <Record WriterName="IIS Config Writer" ServiceName="AppHostSvc" />
+  <Record WriterName="IIS Metabase Writer" ServiceName="IISADMIN" />
+  <Record WriterName="Microsoft Exchange Replica Writer" ServiceName="MSExchangeRepl" />
+  <Record WriterName="Microsoft Exchange Writer" ServiceName="MSExchangeIS" />
+  <Record WriterName="Microsoft Hyper-V VSS Writer" ServiceName="vmms" />
+  <Record WriterName="MSMQ Writer (MSMQ)" ServiceName="MSMQ" />
+  <Record WriterName="MSSearch Service Writer" ServiceName="WSearch" />
+  <Record WriterName="NPS VSS Writer" ServiceName="EventSystem" />
+  <Record WriterName="NTDS" ServiceName="NTDS" />
+  <Record WriterName="OSearch VSS Writer" ServiceName="OSearch" />
+  <Record WriterName="OSearch14 VSS Writer" ServiceName="OSearch14" />
+  <Record WriterName="Pervasive.SQL VSS Writer" ServiceName="Pervasive.SQL (relational)" />
+  <Record WriterName="Registry Writer" ServiceName="VSS" />
+  <Record WriterName="Shadow Copy Optimization Writer" ServiceName="VSS" />
+  <Record WriterName="SMS Writer" ServiceName="SMS_SITE_VSS_WRITER" />
+  <Record WriterName="SPSearch VSS Writer" ServiceName="SPSearch" />
+  <Record WriterName="SPSearch4 VSS Writer" ServiceName="SPSearch4" />
+  <Record WriterName="SqlServerWriter" ServiceName="SQLWriter" />
+  <Record WriterName="System Writer" ServiceName="CryptSvc" />
+  <Record WriterName="Task Scheduler Writer" ServiceName="schedule" />
+  <Record WriterName="TermServLicensing" ServiceName="TermServLicensing" />
+  <Record WriterName="VSS Metadata Store Writer" ServiceName="VSS" />
+  <Record WriterName="WDS VSS Writer" ServiceName="WDSServer" />
+  <Record WriterName="WIDWriter" ServiceName="WIDWriter" />
+  <Record WriterName="WINS Jet Writer" ServiceName="WINS" />
+  <Record WriterName="WMI Writer" ServiceName="Winmgmt" />
+</LookupTable>
