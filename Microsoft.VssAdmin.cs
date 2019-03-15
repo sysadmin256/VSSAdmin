@@ -102,65 +102,6 @@ namespace Microsoft.VssAdmin
             AllocatedStorageSpace = allocatedSpace;
             MaximumStorageSpace = maxSpace;
         }
-
-        public static VssShadowStorage FromMatches(params Match[] matches)
-        {
-            if (matches.Length != 5)
-                throw new ArgumentOutOfRangeException("Value must contain exactly 5 elements.", "matches");
-
-            string storageVol = matches[1].Value.TrimEnd();
-
-            return new VssShadowStorage(
-                matches[0].Value.TrimEnd(),
-                storageVol,
-                ParseStorageValue(storageVol, matches[2].Value.TrimEnd()),
-                ParseStorageValue(storageVol, matches[3].Value.TrimEnd()),
-                ParseStorageValue(storageVol, matches[4].Value.TrimEnd()));
-        }
-
-        private static VssStorageUsage ParseStorageValue(string volume, string value)
-        {
-            Match volMatch = Regex.Match(volume, @"\w:(?=\)\\\\\?)");
-
-            if (!volMatch.Success)
-                throw new ArgumentException("Unrecognized volume: " + volume);
-
-            DriveInfo driveInfo = GetDriveInfo(volMatch.Value);
-            Match storageMatch = Regex.Match(value, @"(UNBOUNDED|\d{0,}\.{0,}\d{1,}\s\w{1,}(?=\s\())");
-
-            if (!storageMatch.Success)
-                throw new ArgumentException("Unrecognized value: " + value);
-
-            if (storageMatch.Value == "UNBOUNDED")
-                return new VssStorageUsage(driveInfo, -1);
-
-            string[] split = storageMatch.Value.Split();
-
-            switch(split[1])
-            {
-                case "B":
-                case "Bytes":
-                case "bytes":
-                    return new VssStorageUsage(driveInfo, long.Parse(split[0]));
-                case "KB":                        
-                    return new VssStorageUsage(driveInfo, (long)(double.Parse(split[0]) * 1024));
-                case "MB":                        
-                    return new VssStorageUsage(driveInfo, (long)(double.Parse(split[0]) * 1048576));
-                case "GB":                        
-                    return new VssStorageUsage(driveInfo, (long)(double.Parse(split[0]) * 1073741824));
-                default:
-                    throw new ArgumentException("Unrecognized value: " + storageMatch.Value);
-            }
-        }
-
-        private static DriveInfo GetDriveInfo(string volume)
-        {
-            foreach(DriveInfo drive in DriveInfo.GetDrives())
-                if (drive.Name.StartsWith(volume, StringComparison.CurrentCultureIgnoreCase))
-                    return drive;
-
-            throw new ArgumentException("The drive " + volume + " was not found.");
-        }
     }
 
     public enum VssSnapshotContext

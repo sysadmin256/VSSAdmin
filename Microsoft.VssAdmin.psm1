@@ -1,9 +1,9 @@
 ﻿# Import custom .NET wrapper objects for the VSS admin structures/enumerations
 Add-Type -Path ($PSScriptRoot + '\Microsoft.VssAdmin.cs')
-#Add-Type -Path C:\Users\zack\Documents\WindowsPowerShell\Modules\Microsoft.VssAdmin\Microsoft.VssAdmin.cs
+#Add-Type -Path C:\Users\zbolin\source\repos\Microsoft.VssAdmin\Microsoft.VssAdmin.cs
 
 function New-DynamicParameterSet {
-    param()
+    param()    
 
     return New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
 }
@@ -15,32 +15,19 @@ function New-DynamicParameter {
         [Parameter(Position=1)]
         [type]$Type = [type][psobject],
         [Parameter()]
-        [psobject[]]$ValidateSet,
+        [string]$ParameterSetName = '__AllParameterSets',
+        [Parameter()]
+        [string[]]$ValidateSet,
         [Parameter()]
         [switch]$Mandatory 
     )
     $attributes = New-Object System.Collections.ObjectModel.Collection[System.Attribute]
-    if ($Mandatory) {
-        $attributes.Add((New-Object Parameter -Property @{Mandatory=$Mandatory}))
-    }
+    $attributes.Add((New-Object System.Management.Automation.ParameterAttribute -Property @{Mandatory=$Mandatory; ParameterSetName=$ParameterSetName}))
+    
     if ($ValidateSet) {
-        $attributes.Add((New-Object ValidateSet $ValidateSet))
+        $attributes.Add((New-Object System.Management.Automation.ValidateSetAttribute $ValidateSet))
     }
     return New-Object System.Management.Automation.RuntimeDefinedParameter $Name, $Type, $attributes
-}
-
-function Add-DynamicParameter {
-    param(
-        [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
-        [System.Management.Automation.RuntimeDefinedParameterDictionary]$Dictionary,
-        [Parameter(Mandatory=$true,Position=0)]
-        [System.Management.Automation.RuntimeDefinedParameter]$Parameter
-    )
-
-    process {
-        $Dictionary.Add($Parameter.Name, $Parameter)
-        $Dictionary | Write-Output
-    }
 }
 
 function Invoke-VssAdmin {
@@ -233,18 +220,92 @@ function Get-VssShadowStorage {
     [CmdletBinding()]
     param()
 
-    $output = Invoke-VssAdmin list shadowstorage
-    $Matches = [regex]::Matches($output -join "`r`n", '(?<=:\s).{1,}', [System.Text.RegularExpressions.RegexOptions]::Multiline)   
+    DynamicParam {
+        $drives = [string[]]@([System.IO.DriveInfo]::GetDrives() | Where-Object {$_.DriveType -eq 'Fixed'} | ForEach-Object {$_.Name.Substring(0,2)})
+        $set = New-DynamicParameterSet 
+        $set.Add('ForVolume', (New-DynamicParameter ForVolume ([string]) -ValidateSet $drives))
+        $set.Add('OnVolume', (New-DynamicParameter OnVolume ([string]) -ValidateSet $drives))
 
-    try {
-        if (-not $Matches) {
-            throw $output
+        return $set
+    }
+    begin {
+        
+        $forVolFilter = if ($PSBoundParameters.ContainsKey('ForVolume')) {$PSBoundParameters['ForVolume']}
+        $onVolFilter = if ($PSBoundParameters.ContainsKey('OnVolume')) {$PSBoundParameters['OnVolume']}
+
+        function Get-DriveInfo {
+            param (
+                [string]$Volume
+            )
+
+            [System.IO.DriveInfo]::GetDrives() | Where-Object {$_.Name.StartsWith($Volume, [System.StringComparison]::CurrentCultureIgnoreCase)} | Write-Output
         }
-        for ($i = 0; $i -lt $Matches.Count; $i += 5) {                              
-            [Microsoft.VssAdmin.VssShadowStorage]::FromMatches($Matches[$i], $Matches[$i + 1],$Matches[$i + 2],$Matches[$i + 3],$Matches[$i + 4]) | Write-Output
+        function Get-StorageValue {
+            [CmdletBinding()]
+            param(
+                [string]$Volume,
+                [Parameter(ValueFromPipelineByPropertyName=$true)]
+                [string[]]$Value
+            )
+            begin { 
+                $volMatch = [regex]::Match($Volume, "\w:(?=\)\\\\\?)")
+
+                if (-not $volMatch.Success) {
+                    throw New-Object System.ArgumentException ("Unrecognized volume: " + $Volume);
+                }
+
+                $driveInfo = Get-DriveInfo $volMatch.Value            
+            }
+            process {
+                foreach ($item in $Value) {
+                    $match = [regex]::Match($item.TrimEnd(), "(UNBOUNDED|\d{0,}\.{0,}\d{1,}\s\w{1,}(?=\s\())")
+                    if (-not $match.Success) {
+                        Write-Error -Exception (New-Object System.ArgumentException ('Unrecognized value: ' + $item))
+                    }
+                    if ($match.Value -eq 'UNBOUNDED') {
+                        return New-Object Microsoft.VssAdmin.VssStorageUsage $driveInfo, -1
+                    }
+
+                    $split = $match.Value.Split()
+
+                    switch($split[1]) {
+                        B { New-Object Microsoft.VssAdmin.VssStorageUsage $driveInfo, ([long]::Parse($split[0])) | Write-Output }
+                        Bytes { New-Object Microsoft.VssAdmin.VssStorageUsage $driveInfo, ([long]::Parse($split[0])) | Write-Output }
+                        KB { New-Object Microsoft.VssAdmin.VssStorageUsage $driveInfo, ([long]([double]::Parse($split[0]) * 1KB)) | Write-Output }
+                        MB { New-Object Microsoft.VssAdmin.VssStorageUsage $driveInfo, ([long]([double]::Parse($split[0]) * 1MB)) | Write-Output }
+                        GB { New-Object Microsoft.VssAdmin.VssStorageUsage $driveInfo, ([long]([double]::Parse($split[0]) * 1GB)) | Write-Output }
+                        TB { New-Object Microsoft.VssAdmin.VssStorageUsage $driveInfo, ([long]([double]::Parse($split[0]) * 1TB)) | Write-Output }
+                        PB { New-Object Microsoft.VssAdmin.VssStorageUsage $driveInfo, ([long]([double]::Parse($split[0]) * 1PB)) | Write-Output }
+                        Default { Write-Error  ("Unrecognized storage unit: " + $split[1]) }
+                    }
+                }
+            }
         }
-    } catch {
-        Write-Error -Message "Failed to parse output of 'vssadmin.exe list shadowstorage'." -Exception $_.Exception
+    }
+    process {
+        $output = Invoke-VssAdmin list shadowstorage
+        $Matches = [regex]::Matches($output -join "`r`n", '(?<=:\s).{1,}$', [System.Text.RegularExpressions.RegexOptions]::Multiline)   
+
+        try {
+            if (-not $Matches) {
+                throw $output
+            }
+            for ($i = 0; $i -lt $Matches.Count; $i += 5) {
+                $forVol = $Matches[$i].Value
+                if ($forVolFilter -and $forVol -notlike "*$forVolFilter*") {
+                    continue
+                }                
+                $onVol = $Matches[$i + 1].Value
+                if ($onVolFilter -and $onVol -notlike "*$onVolFilter*") {
+                    continue
+                } 
+                $argList = @($Matches[$i].Value, $onVol) + ($Matches[($i + 2)..($i + 4)] | Get-StorageValue -Volume $onVol)
+
+                New-Object Microsoft.VssAdmin.VssShadowStorage $argList | Write-Output
+            }
+        } catch {
+            Write-Error -Message "Failed to parse output of 'vssadmin.exe list shadowstorage'." -Exception $_.Exception
+        }
     }   
 }
 
@@ -275,7 +336,10 @@ function Get-VssShadowCopy {
     param( )
 
     DynamicParam {
-        return New-DynamicParameterSet | Add-DynamicParameter -Parameter (New-DynamicParameter Provider ([Microsoft.VssAdmin.VssShadowCopy]) -ValidateSet (Get-VssProvider))
+        $set = New-DynamicParameterSet
+        $set.Add('Provider', (New-DynamicParameter Provider ([Microsoft.VssAdmin.VssShadowCopy]) -ValidateSet (Get-VssProvider)))
+
+        return $set
     }
     process { }
     end {
@@ -332,8 +396,8 @@ Export-ModuleMember -Function Get-VssShadowCopy
 # SIG # Begin signature block
 # MIIV6wYJKoZIhvcNAQcCoIIV3DCCFdgCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUwHJYBQwNxuyKUxm3F6TDXuZI
-# Lbeggg+qMIIEmTCCA4GgAwIBAgIPFojwOSVeY45pFDkH5jMLMA0GCSqGSIb3DQEB
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU65OLFefZv0tnR5QdkLiu8jlb
+# TVmggg+qMIIEmTCCA4GgAwIBAgIPFojwOSVeY45pFDkH5jMLMA0GCSqGSIb3DQEB
 # BQUAMIGVMQswCQYDVQQGEwJVUzELMAkGA1UECBMCVVQxFzAVBgNVBAcTDlNhbHQg
 # TGFrZSBDaXR5MR4wHAYDVQQKExVUaGUgVVNFUlRSVVNUIE5ldHdvcmsxITAfBgNV
 # BAsTGGh0dHA6Ly93d3cudXNlcnRydXN0LmNvbTEdMBsGA1UEAxMUVVROLVVTRVJG
@@ -423,28 +487,28 @@ Export-ModuleMember -Function Get-VssShadowCopy
 # ZGR5IFNlY3VyZSBDZXJ0aWZpY2F0ZSBBdXRob3JpdHkgLSBHMgIJAKyRGNjDyZn4
 # MAkGBSsOAwIaBQCgeDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3
 # DQEJAzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEV
-# MCMGCSqGSIb3DQEJBDEWBBTiRG9pqmsXyQ/ZDsWwIxDjc8lz3DANBgkqhkiG9w0B
-# AQEFAASCAgARtEGz8JZq+krnAWCsX81YkI5lbHWQrgcZgXbFI9LaEQnmBls31XI+
-# 6N3/CZadWY0qinRsjrzLc/5LpC5gSuHvF3ZIZ4K8SNMc7r3xVgEiNBo8hHUeDcP/
-# ocD1rh0D6DGoT2kCZnxVON2wFUMeOTHqRVdoRm3CJ7QYM8z5XL/f7iSh1q7mNqbs
-# /vs4ABqUNZBBRaOQRXSaqhBDtxb0jA4KXf9BA67c7ePI0G8NcukgFRADy/fEnGFU
-# ylJ/1ZQShZHLNQNhCBq9QuNZ4ziAQnWNRH9n/aoZe2n9xIU1n2OMfSr6aD7N8vgm
-# /TQWFQlvd/Hn6Z5UfDP2/FrkHwPCmvl+MQT31ymX0SLevslBfxpHY/uC9xdUcaA6
-# uePptTYKULkE0Vy05zjYE5A9Pk2EhsGLc88m4Js65qdNI2lf5PeBdVZEOWuXLw31
-# QN/Az5DbUQeZ00dLtn4/HIqHMqrz79aqG4JLGEvdTxVcftcY1/NFOr3NBU5pG1p6
-# Af/JDOhFlH5x+KbOagwJVn25OdtNQB8veHrB8GUwx8D9PRpLhENrR9zrKsRTYLAz
-# lxuMzQe0BKBAGB1jKKTzWak2PLSwq8RwhtW7Lo82ixUDzsM+bvuVWDBInRuM4WlH
-# 6hlnG9eolmsfXN38iyYTvFbY45v8DjopdPu5xkLFDla6YLy0ECshAKGCAkMwggI/
+# MCMGCSqGSIb3DQEJBDEWBBRfrHJDiBJ5Vst2FuJV/kdeAp7ooTANBgkqhkiG9w0B
+# AQEFAASCAgAD7vqWjpjRq7x/SLluKtKfmmgC3Y7HyRGeYDoTYlfAsPNb7vkSoKIT
+# CbG7QdqXR8utTyeo336Apf+YXUjy8K+aMsMHPcxxcyFbdnA/54yN9dRlHw3eRMEd
+# AlPK3S0J85KPfCJ4nAoDNsdvPYP4osvdtwDZZyMnIQ3M6al80YUPDT2GpLJRP7A5
+# OuXugNj4x5RrKBjIXz1dZaWfaWY2vPUJifba3DkV8bO2EtaF7zDhsKFQpubAYxD/
+# tfBpotLsAXDRcNM7rZF7bUjOWClKPHIfoLKoHvBMKFWIEXyhTb0TJs721cDpi6M7
+# J4cMEPyTgsYzo+fluuEIXTZHn8AtwJRlWiI/mjWdLw4oNjZFUsuuySQNwLZTVivo
+# XgpCMYFtdZE8ZR4UsmcS1wJIVXqk6njBlusEwEdvqaZh7v9GUQpVv58uiUexRcIf
+# /0huU1Gr0vbwO5Zu8qiWH9eFw/4I6Fwxgs6nx3dcAg+42fQZvYMVZKiKkJLo59TW
+# Idj6zR55Kc0fzwUooc4ixTjuD0WqKtREVFSCY300tpLUL+7IbWOmtma19HLm+buA
+# Jj7YarDQpmeOQzLG0Y14oyJf7tKD7RFTIncQym+tm405bfxY6ff0hr47cEQarUJf
+# 6YHpuvVUH2vEczpMPmjoSiqdPJCib6s5SM7n7cncVG5w6B0Stcjcl6GCAkMwggI/
 # BgkqhkiG9w0BCQYxggIwMIICLAIBATCBqTCBlTELMAkGA1UEBhMCVVMxCzAJBgNV
 # BAgTAlVUMRcwFQYDVQQHEw5TYWx0IExha2UgQ2l0eTEeMBwGA1UEChMVVGhlIFVT
 # RVJUUlVTVCBOZXR3b3JrMSEwHwYDVQQLExhodHRwOi8vd3d3LnVzZXJ0cnVzdC5j
 # b20xHTAbBgNVBAMTFFVUTi1VU0VSRmlyc3QtT2JqZWN0Ag8WiPA5JV5jjmkUOQfm
 # MwswCQYFKw4DAhoFAKBdMBgGCSqGSIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZI
-# hvcNAQkFMQ8XDTE5MDMxNDIxMTk0NFowIwYJKoZIhvcNAQkEMRYEFBX1O+WMMhhr
-# R/IhYAqY1NWbvFu9MA0GCSqGSIb3DQEBAQUABIIBAMEKt3++sKC+gIM5vyTguKDp
-# Vto1BkRg1JxNhnIbGiAPQMeldxIHh4a8eOg4TtipQLMoN4pEBzTw3SCzG7V4iqeU
-# 0OdknB7p3fKhjlmgi3hr0yqEjMUQ5PotaqBs+dg/O0ZZRJz0H8bRs2HmQswyV2vg
-# 4xiagYmyLAXgi1/Tma0SO2g8MTQGj19i9skDJeUAXPro0f8AIZ4RPjcq/FhsY120
-# uGPfw+9TbOHmRxQ3G90H1KxyVGq19YnR+kbklh5jpN3ijWQii7Q1okH+FvdTX+lN
-# wpUbB1haYjcAcVZnGbQJlTZ2EzRkJzOgYc1p/fvKSMsoHdiZKZeAqCzKR7ehGx4=
+# hvcNAQkFMQ8XDTE5MDMxNTE5NTEyNlowIwYJKoZIhvcNAQkEMRYEFIQ+xhz/R442
+# 02hqsRNEow9h1Y2cMA0GCSqGSIb3DQEBAQUABIIBAN58m7xc3flZlk+rzWcRUNBw
+# QevQ1VhA5m1G+SK3LN5QOjoeZcPxBnDB54OYyqXiREhWRzdoC+B3a3W5zgmoCRrO
+# xO7Nsu0UxAd3lLh1IObxSDmNQFuc/3iL6k0Ws7Hl8vVVGmhZ6Ih4c47ItqxNDgtA
+# T4Zzq/rX2wq0gB34rFZyPUpyPKDeJmrJsYQO6XJCOHHd1N7NTbZCN4pyugwDbeue
+# f/BDj6WR385Q9oD940n7SvEgEP3bMhS+VNOhX6yr6beh4OtMuC6X+52mUuoFya5I
+# hFZlca/CKisxY4OI2NdhzdTzqC5KnbdUIYbWoFxiNCgQA2+hvKmZ7nGhWCtrYLk=
 # SIG # End signature block
