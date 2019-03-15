@@ -397,7 +397,7 @@ function Get-VssShadowCopy {
 
     DynamicParam {
         $set = New-DynamicParameterSet
-        $set.Add('Provider', (New-DynamicParameter Provider ([string]) -ValidateSet (Get-VssProvider | Foreach {$_.ToString()})))
+        $set.Add('Provider', (New-DynamicParameter Provider ([string]) -ValidateSet (Get-VssProvider | ForEach-Object {$_.ToString()})))
 
         return $set
     }
@@ -420,12 +420,12 @@ function Get-VssShadowCopy {
                 $shadowVol = $Matches[$i+4].Value.TrimEnd()
                 $orginalMach = $Matches[$i+5].Value.TrimEnd()
                 $serviceMach = $Matches[$i+6].Value.TrimEnd()
-                $provider = $providers | Where {$_.Name -eq $Matches[$i+7].Value.TrimEnd().Replace("'", "")}
+                $provider = $providers | Where-Object {$_.Name -eq $Matches[$i+7].Value.TrimEnd().Replace("'", "")}
                 if (-not $providers -and $PSBoundParameters.ContainsKey('Provider')) {
                     continue
                 }
                 $context = [Microsoft.VssAdmin.VssSnapshotContext]$Matches[$i+8].Value.TrimEnd()
-                $attribtues = $Matches[$i+9].Value.TrimEnd() -split ',' | Foreach {[Microsoft.VssAdmin.VssShadowcopyAttributes](($_ -replace '-','') -replace ' ','')}
+                $attribtues = $Matches[$i+9].Value.TrimEnd() -split ',' | ForEach-Object {[Microsoft.VssAdmin.VssShadowcopyAttributes](($_ -replace '-','') -replace ' ','')}
 
                 New-Object Microsoft.VssAdmin.VssShadowCopy $set,$creationTime,$id,$forVol,$shadowVol,$orginalMach,$serviceMach,$provider, $context, $attribtues | Write-Output
             }        
