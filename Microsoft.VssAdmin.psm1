@@ -1,6 +1,5 @@
 ﻿# Import custom .NET wrapper objects for the VSS admin structures/enumerations
 Add-Type -Path ($PSScriptRoot + '\Microsoft.VssAdmin.cs')
-#Add-Type -Path C:\Users\zbolin\source\repos\Microsoft.VssAdmin\Microsoft.VssAdmin.cs
 
 function New-DynamicParameterSet {
     param()    
