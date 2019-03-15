@@ -337,7 +337,7 @@ function Get-VssShadowCopy {
 
     DynamicParam {
         $set = New-DynamicParameterSet
-        $set.Add('Provider', (New-DynamicParameter Provider ([Microsoft.VssAdmin.VssShadowCopy]) -ValidateSet (Get-VssProvider)))
+        $set.Add('Provider', (New-DynamicParameter Provider ([string]) -ValidateSet (Get-VssProvider | Foreach {$_.ToString()})))
 
         return $set
     }
@@ -350,7 +350,7 @@ function Get-VssShadowCopy {
             if (-not $Matches) {
                 throw New-Object System.Exception $output
             }        
-            $providers = @(if ($PSBoundParameters.ContainsKey('Provider')) {$PSBoundParameters['Provider']} else { Get-VssProvider })
+            $providers = @(if ($PSBoundParameters.ContainsKey('Provider')) {Get-VssProvider -Name $PSBoundParameters['Provider']} else { Get-VssProvider })
 
             for($i = 0; $i -lt $Matches.Count; $i += 10) {
                 $set = New-Object guid $Matches[$i].Value.TrimEnd()

@@ -57,6 +57,11 @@ namespace Microsoft.VssAdmin
             Id = id;
             Version = version;
         }
+
+        public override string ToString()
+        {
+            return Name;
+        }
     }
 
     public class VssVolume
