@@ -36,3 +36,9 @@ Update the MaxSize to UNBOUNDED
 ```PowerShell
 PS> Get-VssShadowStorage -ForVolum C: | Resize-VssShadowStorage -Unbounded
 ```
+
+##### Example \#4
+List all ShadowCopies created by a specified Provider
+```PowerShell
+PS> Get-VssShadowCopy -Provider 'Microsoft Software Shadow Copy provider 1.0'
+```
