@@ -1,6 +1,18 @@
 ﻿# Import custom .NET wrapper objects for the VSS admin structures/enumerations
 Add-Type -Path ($PSScriptRoot + '\Microsoft.VssAdmin.cs')
 
+# PowerShell v2.0 does not support the RunAsAdministrator #requires directive, so this is a workaround to ensure the user knows why commands aren't working 
+function Test-Administrator {
+    if (-not (Get-Variable IsAdministrator -Scope Script -ea SilentlyContinue)) {
+        $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+        $principal = New-Object System.Security.Principal.WindowsPrincipal $identity
+        
+        New-Variable IsAdministrator $principal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator) -Scope Script
+    }
+
+    return $Script:IsAdministrator
+}
+
 function New-DynamicParameterSet {
     param()    
 
@@ -43,8 +55,13 @@ function Invoke-VssAdmin {
         [Parameter(ValueFromRemainingArguments=$true)]
         [string[]]$ArgumentList = @('/?')
     )
-    "Executing: 'vssadmin.exe' $($ArgumentList -join ' ')" | Write-Verbose
-    & vssadmin.exe $ArgumentList | Write-Output
+    if (-not (Test-Administrator)) { 
+        Write-Error "VssAdmin.exe requires administrator permissions." 
+    }
+    else {
+        "Executing: 'vssadmin.exe' {0}" -f ($ArgumentList -join ' ') | Write-Verbose
+        & vssadmin.exe $ArgumentList | Write-Output
+    }
 }
 
 function Get-VssWriter {
@@ -53,6 +70,8 @@ function Get-VssWriter {
         Gets a list of VSS writers installed on the system.
     .DESCRIPTION
         A wrapper for the 'vssadmin list writers' command.
+    .PARAMETER Name
+        Returns the VssWrite instance with the specified name, or $null if no matching writer is found.
     .PARAMETER Include
         Optionally specify a list of VSSWriterState values to include. Any writers in a state not contained in this parameter's value will not be returned.
     .PARAMETER Exclude
@@ -107,6 +126,8 @@ function Get-VssWriterService {
         Returns the ServiceController instance for the Windows Service that hosts the specified VSS writer(s).
     .PARAMETER Writer
         One or more VssWriter instances to return the ServiceController object for
+    .PARAMETER Unique
+        Some windows services host multiple VSS writers. This switch ensures only unique ServiceController objects are returned.
     .INPUTS
         Microsoft.VssAdmin.VssWriter
     .OUTPUTS 
@@ -161,6 +182,14 @@ function Get-VssWriterService {
 }
 
 function Get-VssProvider {
+    <#
+    .SYNOPSIS
+        Gets a list of VSS providers installed on the system.
+    .DESCRIPTION
+        A wrapper for the 'vssadmin list providers' command.
+    .PARAMETER Name
+        Returns the VssProvider instance with the specified name, or $null if no matching provider is found.
+    #>
     [CmdletBinding()]
     param(
         [Parameter()]
@@ -197,6 +226,12 @@ function Get-VssProvider {
 }
 
 function Get-VssVolume {
+    <#
+    .SYNOPSIS
+        Gets a list of volumes eligible for VSS backups on the system.
+    .DESCRIPTION
+        A wrapper for the 'vssadmin list volumes' command.        
+    #>
     [CmdletBinding()]
     param()
 
@@ -216,6 +251,12 @@ function Get-VssVolume {
 }
 
 function Get-VssShadowStorage {
+    <#
+    .SYNOPSIS
+        Gets a list of registered VSS storage associations.
+    .DESCRIPTION
+        A wrapper for the 'vssadmin list shadowstorage' command.             
+    #>
     [CmdletBinding()]
     param()
 
@@ -309,6 +350,20 @@ function Get-VssShadowStorage {
 }
 
 function Resize-VssShadowStorage {
+    <#
+    .SYNOPSIS
+        Updates an existing VSS storage association
+    .DESCRIPTION
+        A wrapper for the 'vssadmin resize shadowstorage' command
+    .PARAMETER InputObject
+        An array of Microsoft.VssAdmin.VssShadowStorage objects to update
+    .PARAMETER NewSize
+        The new maximum size
+    .PARAMETER As
+        Specifies how NewSize should be interpreted.
+    .PARAMETER Unbounded
+        True if there should not be a size limit     
+    #>
     [CmdletBinding()]
     param(
         [Parameter(ValueFromPipeline=$true)]
@@ -331,6 +386,12 @@ function Resize-VssShadowStorage {
 }
 
 function Get-VssShadowCopy {
+    <#
+    .SYNOPSIS
+        Gets a list of the ShadowCopies available on the system.
+    .DESCRIPTION
+        A wrapper for the 'vssadmin list shadows' command
+    #>
     [CmdletBinding()]
     param( )
 
