@@ -1,6 +1,6 @@
 ﻿# Import custom .NET wrapper objects for the VSS admin structures/enumerations
 Add-Type -Path ($PSScriptRoot + '\Microsoft.VssAdmin.cs')
-Add-Type -Path C:\Users\zack\Documents\WindowsPowerShell\Modules\Microsoft.VssAdmin\Microsoft.VssAdmin.cs
+#Add-Type -Path C:\Users\zack\Documents\WindowsPowerShell\Modules\Microsoft.VssAdmin\Microsoft.VssAdmin.cs
 
 function New-DynamicParameterSet {
     param()
@@ -111,7 +111,7 @@ function Get-VssWriter {
             }
         }
     } catch {
-        "Failed to parse output of 'vssadmin.exe list writers'`r`n" | Write-Error -Exception $_.Exception
+        Write-Error -Message "Failed to parse output of 'vssadmin.exe list writers'" -Exception $_.Exception
     }     
 }
 
@@ -206,7 +206,7 @@ function Get-VssProvider {
             }
         }
     } catch {
-         "Failed to parse output of 'vssadmin.exe list providers'" | Write-Error -Exception $_.Exception
+         Write-Error -Message "Failed to parse output of 'vssadmin.exe list providers'" -Exception $_.Exception
     }       
 }
 
@@ -225,7 +225,7 @@ function Get-VssVolume {
             Write-Output (New-Object Microsoft.VssAdmin.VssVolume $Matches[$i].Value.TrimEnd(),$Matches[$i + 1].Value.TrimEnd())
         }
     } catch {
-        "Failed to parse output of 'vssadmin.exe list volumes'." | Write-Error -Exception $_.Exception
+        Write-Error -Message "Failed to parse output of 'vssadmin.exe list volumes'." -Exception $_.Exception
     }          
 }
 
@@ -244,18 +244,30 @@ function Get-VssShadowStorage {
             [Microsoft.VssAdmin.VssShadowStorage]::FromMatches($Matches[$i], $Matches[$i + 1],$Matches[$i + 2],$Matches[$i + 3],$Matches[$i + 4]) | Write-Output
         }
     } catch {
-        "Failed to parse output of 'vssadmin.exe list shadowstorage'." | Write-Error -Exception $_.Exception
+        Write-Error -Message "Failed to parse output of 'vssadmin.exe list shadowstorage'." -Exception $_.Exception
     }   
 }
 
 function Resize-VssShadowStorage {
     [CmdletBinding()]
     param(
-        [Parameter()]
-        [Microsoft.VssAdmin.VssShadowStorage]$InputObject        
+        [Parameter(ValueFromPipeline=$true)]
+        [Microsoft.VssAdmin.VssShadowStorage[]]$InputObject,
+        [Parameter(Mandatory=$true, ParameterSetName='Default')]
+        [long]$NewSize,
+        [ValidateSet('%', 'B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB')]
+        [string]$As = 'B',
+        [Parameter(ParameterSetName='Unbounded')]
+        [switch]$Unbounded                
     )
-    begin { throw New-Object System.NotImplementedException }
-    process { }
+    process { 
+        foreach($item in $InputObject) {
+            $for = [regex]::Match($item.ForVolume, "\w:").Value
+            $on = [regex]::Match($item.StorageVolume, "\w:").Value
+            $size = if ($Unbounded) {'UNBOUNDED'} else {$NewSize.ToString() + $As}
+            Invoke-VssAdmin resize shadowstorage /For=$for /On=$on /MaxSize=$size | Write-Verbose
+        }
+    }
 }
 
 function Get-VssShadowCopy {
@@ -313,7 +325,7 @@ Export-ModuleMember -Function Get-VssWriterService
 Export-ModuleMember -Function Get-VssProvider
 Export-ModuleMember -Function Get-VssVolume
 Export-ModuleMember -Function Get-VssShadowStorage
-# Export-ModuleMember -Function Resize-VssShadowStorage
+Export-ModuleMember -Function Resize-VssShadowStorage
 Export-ModuleMember -Function Get-VssShadowCopy
 # Export-ModuleMember -Function New-VssShadowCopy
 

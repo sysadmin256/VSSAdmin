@@ -212,5 +212,38 @@
 		</ListEntries>
 	</ListControl>
 </View>
+<View>
+	<Name>VssShadowCopy-Table</Name>
+	<ViewSelectedBy>
+		<TypeName>Microsoft.VssAdmin.VssShadowCopy</TypeName>
+	</ViewSelectedBy>
+	<TableControl>		
+		<TableHeaders>
+			<TableColumnHeader>
+			</TableColumnHeader>
+			<TableColumnHeader>
+			</TableColumnHeader>
+			<TableColumnHeader>
+			</TableColumnHeader>
+		</TableHeaders>
+		<TableRowEntries>
+			<TableRowEntry>
+				<TableColumnItems>
+					<TableColumnItem>
+						<PropertyName>CreationTime</PropertyName>
+                        <FormatString>{0,16:MM/dd/yyyy hh:mm}</FormatString>
+					</TableColumnItem>
+					<TableColumnItem>
+						<PropertyName>OriginalVolume</PropertyName>
+					</TableColumnItem>
+					<TableColumnItem>
+						<PropertyName>ShadowCopyVolume</PropertyName>						
+					</TableColumnItem>
+				</TableColumnItems>
+			</TableRowEntry>
+		</TableRowEntries>
+        <AutoSize/>
+	</TableControl>
+</View>
 </ViewDefinitions>
 </Configuration>
