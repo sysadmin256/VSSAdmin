@@ -474,7 +474,7 @@ function Remove-VssShadowCopy {
                 }
             }
         } else {
-            if ($PSCmdlet.ShouldProcess($env:COMPUTERNAME, "Delete shadow copy " + $item.ShadowCopyId)) {
+            if ($PSCmdlet.ShouldProcess($env:COMPUTERNAME, "Delete shadow copies")) {
                 $shadowCopies = @(Get-VssShadowCopy)
                 if ($PSBoundParameters.ContainsKey('ForVolume')) {
                     $shadowCopies = $shadowCopies | Where-Object {$_.OriginalVolume -like "*$forVol*"}
