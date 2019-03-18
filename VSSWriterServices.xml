@@ -3,6 +3,7 @@
   <Record WriterName="ASR Writer" ServiceName="VSS" />
   <Record WriterName="BITS Writer" ServiceName="BITS" />
   <Record WriterName="Certificate Authority" ServiceName="CertSvc" />
+  <Record WriterName="Cluster Database" ServiceName="ClusSvc" />
   <Record WriterName="COM+ REGDB Writer" ServiceName="VSS" />
   <Record WriterName="DFS Replication service writer" ServiceName="DFSR" />
   <Record WriterName="DHCP Jet Writer" ServiceName="DHCPServer" />

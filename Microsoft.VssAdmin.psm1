@@ -6,8 +6,8 @@ function Test-Administrator {
     if (-not (Get-Variable IsAdministrator -Scope Script -ea SilentlyContinue)) {
         $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
         $principal = New-Object System.Security.Principal.WindowsPrincipal $identity
-        
-        New-Variable IsAdministrator $principal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator) -Scope Script
+        $identity.Dispose()
+        $Script:IsAdministrator = $principal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
     }
 
     return $Script:IsAdministrator
