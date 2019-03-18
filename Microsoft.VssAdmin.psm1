@@ -1,6 +1,5 @@
 ﻿# Import custom .NET wrapper objects for the VSS admin structures/enumerations
 Add-Type -Path ($PSScriptRoot + '\Microsoft.VssAdmin.cs')
-Add-Type -Path C:\Users\zbolin\source\repos\Microsoft.VssAdmin\Microsoft.VssAdmin.cs
 
 # PowerShell v2.0 does not support the RunAsAdministrator #requires directive, so this is a workaround to ensure the user knows why commands aren't working 
 function Test-Administrator {
