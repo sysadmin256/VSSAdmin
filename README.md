@@ -1,5 +1,5 @@
 # Microsoft.VssAdmin
-PowerShell module for the Vssadmin utility
+PowerShell module for the [Vssadmin](https://docs.microsoft.com/windows-server/administration/windows-commands/vssadmin) utility
 
 ### Table of Contents
   * [Command \-\> Function Lookup](#command---function-lookup)
