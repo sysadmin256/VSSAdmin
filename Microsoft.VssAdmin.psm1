@@ -1,13 +1,14 @@
 ﻿# Import custom .NET wrapper objects for the VSS admin structures/enumerations
 Add-Type -Path ($PSScriptRoot + '\Microsoft.VssAdmin.cs')
+Add-Type -Path C:\Users\zbolin\source\repos\Microsoft.VssAdmin\Microsoft.VssAdmin.cs
 
 # PowerShell v2.0 does not support the RunAsAdministrator #requires directive, so this is a workaround to ensure the user knows why commands aren't working 
 function Test-Administrator {
     if (-not (Get-Variable IsAdministrator -Scope Script -ea SilentlyContinue)) {
         $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
-        $principal = New-Object System.Security.Principal.WindowsPrincipal $identity
-        $identity.Dispose()
+        $principal = New-Object System.Security.Principal.WindowsPrincipal $identity        
         $Script:IsAdministrator = $principal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+        $identity.Dispose()
     }
 
     return $Script:IsAdministrator
@@ -435,6 +436,68 @@ function Get-VssShadowCopy {
     }
 }
 
+function Remove-VssShadowCopy {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param(
+        [Parameter(ValueFromPipeline=$true,ParameterSetName='Input')]
+        [Microsoft.VssAdmin.VssShadowCopy[]]$InputObject,
+        [Parameter(Mandatory=$true,ParameterSetName='Oldest')]
+        [switch]$Oldest,
+        [Parameter(Mandatory=$true,ParameterSetName='All')]
+        [switch]$All,
+        [Parameter()]
+        [switch]$Force
+    )
+
+    DynamicParam {
+        $drives = [string[]]@([System.IO.DriveInfo]::GetDrives() | Where-Object {$_.DriveType -eq 'Fixed'} | ForEach-Object {$_.Name.Substring(0,2)})
+        $set = New-DynamicParameterSet 
+        $param = New-DynamicParameter ForVolume ([string]) -ValidateSet $drives -ParameterSetName 'All'
+        $param.Attributes.Add((New-Object System.Management.Automation.ParameterAttribute -Property @{ParameterSetName='Oldest'}))
+        $set.Add('ForVolume', $param)
+
+        return $set        
+    }
+    begin {
+        $spec = if ($Oldest) {'/Oldest'} elseif($All) {'/All'}
+        $yesToAll = $false
+        $noToAll = $false
+    }
+    process {
+        if ($PSBoundParameters.ContainsKey('InputObject')) {
+            foreach ($item in $InputObject) {
+                if ($PSCmdlet.ShouldProcess($env:COMPUTERNAME, "Delete shadow copy " + $item.ShadowCopyId)) {
+                    if (-not $Force -and -not $PSCmdlet.ShouldContinue('Do you really want to delete 1 shadow copies?', $null, [ref]$yesToAll, [ref]$noToAll)) {
+                        continue
+                    }
+                    $params += '/Shadow=' + $item.ShadowCopyId
+                    Invoke-VssAdmin delete shadows /Shadow=($item.ShadowCopyId) /Quiet | Write-Verbose
+                }
+            }
+        } else {
+            if ($PSCmdlet.ShouldProcess($env:COMPUTERNAME, "Delete shadow copy " + $item.ShadowCopyId)) {
+                $shadowCopies = @(Get-VssShadowCopy)
+                if ($PSBoundParameters.ContainsKey('ForVolume')) {
+                    $shadowCopies = $shadowCopies | Where-Object {$_.OriginalVolume -like "*$forVol*"}
+                }
+                if (-not $shadowCopies) {
+                    "No items found that satisfy the query" | Write-Verbose
+                    return
+                }
+                $count = if ($Oldest) {1} else {$shadowCopies.Count}
+                if (-not $Force -and -not $PSCmdlet.ShouldContinue('Do you really want to delete {0} shadow copies?' -f $count, $null, [ref]$yesToAll, [ref]$noToAll)) {
+                    continue
+                }
+                if ($forVol) {                    
+                    Invoke-VssAdmin delete shadows /For=$forVol $spec /Quiet | Write-Verbose
+                } else {
+                    Invoke-VssAdmin delete shadows $spec /Quiet | Write-Verbose
+                }                
+            }
+        } 
+    }
+}
+
 function New-VssShadowCopy {
     [CmdletBinding()]
     param()
@@ -451,4 +514,5 @@ Export-ModuleMember -Function Get-VssVolume
 Export-ModuleMember -Function Get-VssShadowStorage
 Export-ModuleMember -Function Resize-VssShadowStorage
 Export-ModuleMember -Function Get-VssShadowCopy
+Export-ModuleMember -Function Remove-VssShadowCopy
 # Export-ModuleMember -Function New-VssShadowCopy
