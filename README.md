@@ -8,12 +8,12 @@ PowerShell module for the [Vssadmin](https://docs.microsoft.com/windows-server/a
 ### Command \-\> Function Lookup
 | VssAdmin Command | Wrapper Function | Status |
 |:-----------------|:-----------------|:-------|
-| delete shadows | Remove-VssShadowCopy | Complete |
+| [delete shadows](https://docs.microsoft.com/windows-server/administration/windows-commands/vssadmin-delete-shadows) | Remove-VssShadowCopy | Complete |
 | list providers | Get-VssProvider| Complete |
-| list shadows | Get-VssShadowCopy | Complete |
+| [list shadows](https://docs.microsoft.com/windows-server/administration/windows-commands/vssadmin-list-shadows) | Get-VssShadowCopy | Complete |
 | list shadowstorage | Get-VssShadowStorage | Complete |
 | list volumes | Get-VssVolume | Complete |
-| list writers | Get-VssWriter | Complete |
+| [list writers](https://docs.microsoft.com/windows-server/administration/windows-commands/vssadmin-list-writers) | Get-VssWriter | Complete |
 | resize shadowstorage | Resize-VssShadowStorage | Complete |
 
 ### Examples
