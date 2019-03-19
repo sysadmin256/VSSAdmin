@@ -431,7 +431,9 @@ function Add-VssShadowStorage {
         [ValidateSet('%', 'B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB')]
         [string]$As = 'B',
         [Parameter(ParameterSetName='Unbounded')]
-        [switch]$Unbounded
+        [switch]$Unbounded,
+        [Parameter()]
+        [switch]$PassThru
     )
     DynamicParam {
         $set = New-DynamicParameterSet
@@ -448,7 +450,10 @@ function Add-VssShadowStorage {
         $size = if ($Unbounded) {$null} else {'/MaxSize=' + $MaxSize.ToString() + $As}
         $forVol = $PSBoundParameters['ForVolume'].ToString()
         $onVol = $PSBoundParameters['OnVolume'].ToString()
-        Invoke-VssAdmin add shadowstorage /For=$forVol /On=$onVol $size | Write-Verbose        
+        Invoke-VssAdmin add shadowstorage /For=$forVol /On=$onVol $size | Write-Verbose 
+        if ($PassThru) {
+            Get-VssShadowStorage -ForVolume $forVol | Write-Output
+        }       
     }
 }
 
