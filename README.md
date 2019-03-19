@@ -49,4 +49,4 @@ PS> Get-VssShadowCopy -Provider 'Microsoft Software Shadow Copy provider 1.0'
 
 ### Download \& Install
 
-Download the latest version of the module files [here](bin/Microsoft.VssAdmin.zip)
+Download the latest version of the module files [here](../../raw/masterbin/Microsoft.VssAdmin.zip)
