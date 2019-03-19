@@ -53,7 +53,7 @@ function Get-LocalVolumeDynamicParameter {
         [ValidateNotNull()]
         [string[]]$ParameterSetName = @('__AllParameterSets')
     ) 
-    $param = New-DynamicParameter $ParameterName ([string]) -ValidateSet $Script:DriveInfo -Mandatory:$Mandatory; -ParameterSetName $ParameterSetName[0]
+    $param = New-DynamicParameter $ParameterName ([string]) -ValidateSet $Script:DriveInfo -Mandatory:$Mandatory -ParameterSetName $ParameterSetName[0]
     for ($i = 1; $i -lt $ParameterSetName.Length; $i++) {
         $param.Attributes.Add((New-Object System.Management.Automation.ParameterAttribute -Property @{Mandatory=$Mandatory;ParameterSetName=$ParameterSetName[1]}))
     }
@@ -445,8 +445,10 @@ function Add-VssShadowStorage {
         }
     }
     process {
-        $size = if ($Unbounded) {$null} else {'/MaxSize=' + $NewSize.ToString() + $As}
-        Invoke-VssAdmin add shadowstorage /For=($PSBoundParameters['ForVolume']) /On=($PSBoundParameters['OnVolume']) $size | Write-Verbose        
+        $size = if ($Unbounded) {$null} else {'/MaxSize=' + $MaxSize.ToString() + $As}
+        $forVol = $PSBoundParameters['ForVolume'].ToString()
+        $onVol = $PSBoundParameters['OnVolume'].ToString()
+        Invoke-VssAdmin add shadowstorage /For=$forVol /On=$onVol $size | Write-Verbose        
     }
 }
 
@@ -562,7 +564,7 @@ function New-VssShadowCopy {
     [CmdletBinding()]
     param(
         [Parameter()]
-        [uint]$AutoRetry
+        [uint32]$AutoRetry
     )
     DynamicParam {
         $set = New-DynamicParameterSet
@@ -573,12 +575,13 @@ function New-VssShadowCopy {
         if (-not (Test-VssAdminCommandSupported 'create shadow')) {
             throw New-Object System.NotSupportedException("The command 'vssadmin create shadow' is not supported on this system.")
         }
+        $forVol = $PSBoundParameters['ForVolume'].ToString()
     }
     process {    
         if ($AutoRetry) {
-            Invoke-VssAdmin create shadow /For=($PSBoundParameters['ForVolume']) /AutoRetry=$AutoRetry | Write-Verbose
+            Invoke-VssAdmin create shadow /For=$forVol /AutoRetry=$AutoRetry | Write-Verbose
         } else {    
-            Invoke-VssAdmin create shadow /For=($PSBoundParameters['ForVolume']) | Write-Verbose
+            Invoke-VssAdmin create shadow /For=$forVol | Write-Verbose
         }
     }    
 }
@@ -603,9 +606,9 @@ Export-ModuleMember -Function Get-VssProvider
 Export-ModuleMember -Function Get-VssVolume
 Export-ModuleMember -Function Get-VssShadowStorage
 Export-ModuleMember -Function Resize-VssShadowStorage
-# Export-ModuleMember -Function Add-VssShadowStorage
+Export-ModuleMember -Function Add-VssShadowStorage
 Export-ModuleMember -Function Get-VssShadowCopy
 Export-ModuleMember -Function Remove-VssShadowCopy
-# Export-ModuleMember -Function New-VssShadowCopy
+Export-ModuleMember -Function New-VssShadowCopy
 
 #endregion
