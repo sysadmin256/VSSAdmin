@@ -1,6 +1,8 @@
 ﻿# Import custom .NET wrapper objects for the VSS admin structures/enumerations
 Add-Type -Path ($PSScriptRoot + '\Microsoft.VssAdmin.cs')
 
+$Script:DriveInfo = 
+
 # PowerShell v2.0 does not support the RunAsAdministrator #requires directive, so this is a workaround to ensure the user knows why commands aren't working 
 function Test-Administrator {
     if (-not (Get-Variable IsAdministrator -Scope Script -ea SilentlyContinue)) {
@@ -39,6 +41,24 @@ function New-DynamicParameter {
         $attributes.Add((New-Object System.Management.Automation.ValidateSetAttribute $ValidateSet))
     }
     return New-Object System.Management.Automation.RuntimeDefinedParameter $Name, $Type, $attributes
+}
+
+function Get-LocalVolumeDynamicParameter {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$ParameterName,
+        [Parameter()]
+        [switch]$Mandatory,
+        [Parameter()]
+        [ValidateNotNull()]
+        [string[]]$ParameterSetName = @('__AllParameterSets')
+    ) 
+    $param = New-DynamicParameter $ParameterName ([string]) -ValidateSet $Script:DriveInfo -Mandatory:$Mandatory; -ParameterSetName $ParameterSetName[0]
+    for ($i = 1; $i -lt $ParameterSetName.Length; $i++) {
+        $param.Attributes.Add((New-Object System.Management.Automation.ParameterAttribute -Property @{Mandatory=$Mandatory;ParameterSetName=$ParameterSetName[1]}))
+    }
+    
+    return $param  
 }
 
 function Invoke-VssAdmin {
@@ -261,10 +281,9 @@ function Get-VssShadowStorage {
     param()
 
     DynamicParam {
-        $drives = [string[]]@([System.IO.DriveInfo]::GetDrives() | Where-Object {$_.DriveType -eq 'Fixed'} | ForEach-Object {$_.Name.Substring(0,2)})
         $set = New-DynamicParameterSet 
-        $set.Add('ForVolume', (New-DynamicParameter ForVolume ([string]) -ValidateSet $drives))
-        $set.Add('OnVolume', (New-DynamicParameter OnVolume ([string]) -ValidateSet $drives))
+        $set.Add('ForVolume', (Get-LocalVolumeDynamicParameter ForVolume))
+        $set.Add('OnVolume', (Get-LocalVolumeDynamicParameter OnVolume))
 
         return $set
     }
@@ -385,6 +404,28 @@ function Resize-VssShadowStorage {
     }
 }
 
+function Add-VssShadowStorage {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true, ParameterSetName='Default')]
+        [long]$MaxSize,
+        [ValidateSet('%', 'B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB')]
+        [string]$As = 'B',
+        [Parameter(ParameterSetName='Unbounded')]
+        [switch]$Unbounded
+    )
+    DynamicParam {
+        $set = New-DynamicParameterSet
+        $set.Add('ForVolume', (Get-LocalVolumeDynamicParameter ForVolume -Mandatory))
+        $set.Add('OnVolume', (Get-LocalVolumeDynamicParameter OnVolume -Mandatory))
+        return $set
+    }
+    process {
+        $size = if ($Unbounded) {$null} else {'/MaxSize=' + $NewSize.ToString() + $As}
+        Invoke-VssAdmin add shadowstorage /For=($PSBoundParameters['ForVolume']) /On=($PSBoundParameters['OnVolume']) $size | Write-Verbose        
+    }
+}
+
 function Get-VssShadowCopy {
     <#
     .SYNOPSIS
@@ -449,12 +490,8 @@ function Remove-VssShadowCopy {
     )
 
     DynamicParam {
-        $drives = [string[]]@([System.IO.DriveInfo]::GetDrives() | Where-Object {$_.DriveType -eq 'Fixed'} | ForEach-Object {$_.Name.Substring(0,2)})
-        $set = New-DynamicParameterSet 
-        $param = New-DynamicParameter ForVolume ([string]) -ValidateSet $drives -ParameterSetName 'All'
-        $param.Attributes.Add((New-Object System.Management.Automation.ParameterAttribute -Property @{ParameterSetName='Oldest'}))
-        $set.Add('ForVolume', $param)
-
+        $set = New-DynamicParameterSet
+        $set.Add('ForVolume', (Get-LocalVolumeDynamicParameter ForVolume -ParameterSetName 'All', 'Oldest'))
         return $set        
     }
     begin {
@@ -499,9 +536,22 @@ function Remove-VssShadowCopy {
 
 function New-VssShadowCopy {
     [CmdletBinding()]
-    param()
-
-    throw New-Object System.NotImplementedException
+    param(
+        [Parameter()]
+        [uint]$AutoRetry
+    )
+    DynamicParam {
+        $set = New-DynamicParameterSet
+        $set.Add('ForVolume', (Get-LocalVolumeDynamicParameter ForVolume -Mandatory))
+        return $set        
+    }
+    process {    
+        if ($AutoRetry) {
+            Invoke-VssAdmin create shadow /For=($PSBoundParameters['ForVolume']) /AutoRetry=$AutoRetry | Write-Verbose
+        } else {    
+            Invoke-VssAdmin create shadow /For=($PSBoundParameters['ForVolume']) | Write-Verbose
+        }
+    }    
 }
 
 # Export public API functions
@@ -512,6 +562,7 @@ Export-ModuleMember -Function Get-VssProvider
 Export-ModuleMember -Function Get-VssVolume
 Export-ModuleMember -Function Get-VssShadowStorage
 Export-ModuleMember -Function Resize-VssShadowStorage
+# Export-ModuleMember -Function Add-VssShadowStorage
 Export-ModuleMember -Function Get-VssShadowCopy
 Export-ModuleMember -Function Remove-VssShadowCopy
 # Export-ModuleMember -Function New-VssShadowCopy
