@@ -88,6 +88,21 @@ function Invoke-VssAdmin {
     }
 }
 
+function Get-VssAdminCommands {
+    $output = Invoke-VssAdmin
+    $Matches = [regex]::Matches($output, '\w{1,}\s\w{1,}\b(?=\s{1,}-\s)')
+    $Matches | ForEach-Object {$_.Value} | Write-Output
+}
+
+function Test-VssAdminCommandSupported {
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNull()]
+        [string]$CommandName
+    )    
+    return $Script:VssAdminCommands -icontains $CommandName
+}
+
 function Get-VssWriter {
     <#
     .SYNOPSIS
@@ -424,6 +439,11 @@ function Add-VssShadowStorage {
         $set.Add('OnVolume', (Get-LocalVolumeDynamicParameter OnVolume -Mandatory))
         return $set
     }
+    begin {
+        if (-not (Test-VssAdminCommandSupported 'add shadowstorage')) {
+            throw New-Object System.NotSupportedException("The command 'vssadmin add shadowstorage' is not supported on this system.")
+        }
+    }
     process {
         $size = if ($Unbounded) {$null} else {'/MaxSize=' + $NewSize.ToString() + $As}
         Invoke-VssAdmin add shadowstorage /For=($PSBoundParameters['ForVolume']) /On=($PSBoundParameters['OnVolume']) $size | Write-Verbose        
@@ -549,6 +569,11 @@ function New-VssShadowCopy {
         $set.Add('ForVolume', (Get-LocalVolumeDynamicParameter ForVolume -Mandatory))
         return $set        
     }
+    begin {
+        if (-not (Test-VssAdminCommandSupported 'create shadow')) {
+            throw New-Object System.NotSupportedException("The command 'vssadmin create shadow' is not supported on this system.")
+        }
+    }
     process {    
         if ($AutoRetry) {
             Invoke-VssAdmin create shadow /For=($PSBoundParameters['ForVolume']) /AutoRetry=$AutoRetry | Write-Verbose
@@ -563,6 +588,7 @@ function New-VssShadowCopy {
 #region Script variables
 
 $Script:DriveInfo = [System.IO.DriveInfo]::GetDrives() | Where-Object {$_.DriveType -eq 'Fixed' -and $_.Name} | ForEach-Object {$_.Name.Substring(0,2)}
+$Script:VssAdminCommands = Get-VssAdminCommands
 $Script:VssProviders = Get-VssProvider
 
 #endregion
