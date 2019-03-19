@@ -1,7 +1,7 @@
 ﻿# Import custom .NET wrapper objects for the VSS admin structures/enumerations
 Add-Type -Path ($PSScriptRoot + '\Microsoft.VssAdmin.cs')
 
-$Script:DriveInfo = 
+#region Helper functions
 
 # PowerShell v2.0 does not support the RunAsAdministrator #requires directive, so this is a workaround to ensure the user knows why commands aren't working 
 function Test-Administrator {
@@ -60,6 +60,10 @@ function Get-LocalVolumeDynamicParameter {
     
     return $param  
 }
+
+#endregion
+
+#region VssAdmin functions
 
 function Invoke-VssAdmin {
     <#
@@ -234,7 +238,7 @@ function Get-VssProvider {
             $providerId = New-Object guid $Matches[$i + 2].Value.TrimEnd()
             $version = New-Object version $Matches[$i + 3].Value.TrimEnd()             
 
-            Write-Output (New-Object Microsoft.VssAdmin.VssProvider $providerName,$providerType,$providerId,$version)
+            New-Object Microsoft.VssAdmin.VssProvider $providerName,$providerType,$providerId,$version | Write-Output
 
             if ($Name -and $nameIsMatch) {
                 break
@@ -438,7 +442,7 @@ function Get-VssShadowCopy {
 
     DynamicParam {
         $set = New-DynamicParameterSet
-        $set.Add('Provider', (New-DynamicParameter Provider ([string]) -ValidateSet (Get-VssProvider | ForEach-Object {$_.ToString()})))
+        $set.Add('Provider', (New-DynamicParameter Provider ([string]) -ValidateSet ($Script:VssProviders | ForEach-Object {$_.ToString()})))
 
         return $set
     }
@@ -451,7 +455,7 @@ function Get-VssShadowCopy {
             if (-not $Matches) {
                 throw New-Object System.Exception $output
             }        
-            $providers = @(if ($PSBoundParameters.ContainsKey('Provider')) {Get-VssProvider -Name $PSBoundParameters['Provider']} else { Get-VssProvider })
+            $providers = @(if ($PSBoundParameters.ContainsKey('Provider')) {$Script:VssProviders | Where-Object {$_.Name -eq $PSBoundParameters['Provider']}} else { $Script:VssProviders })
 
             for($i = 0; $i -lt $Matches.Count; $i += 10) {
                 $set = New-Object guid $Matches[$i].Value.TrimEnd()
@@ -554,6 +558,17 @@ function New-VssShadowCopy {
     }    
 }
 
+#endregion
+
+#region Script variables
+
+$Script:DriveInfo = [System.IO.DriveInfo]::GetDrives() | Where-Object {$_.DriveType -eq 'Fixed' -and $_.Name} | ForEach-Object {$_.Name.Substring(0,2)}
+$Script:VssProviders = Get-VssProvider
+
+#endregion
+
+#region Module member exports
+
 # Export public API functions
 Export-ModuleMember -Function Invoke-VssAdmin -Alias vssadmin
 Export-ModuleMember -Function Get-VssWriter
@@ -566,3 +581,5 @@ Export-ModuleMember -Function Resize-VssShadowStorage
 Export-ModuleMember -Function Get-VssShadowCopy
 Export-ModuleMember -Function Remove-VssShadowCopy
 # Export-ModuleMember -Function New-VssShadowCopy
+
+#endregion
