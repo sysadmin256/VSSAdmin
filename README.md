@@ -4,6 +4,7 @@ PowerShell module for the [Vssadmin](https://docs.microsoft.com/windows-server/a
 ### Table of Contents
   * [Command \-\> Function Lookup](#command---function-lookup)
   * [Examples](#examples)
+  * [Download & Install](#download--install)
 
 ### Command \-\> Function Lookup
 | VssAdmin Command | Wrapper Function | Status |
@@ -45,3 +46,7 @@ List all ShadowCopies created by a specified Provider
 ```PowerShell
 PS> Get-VssShadowCopy -Provider 'Microsoft Software Shadow Copy provider 1.0'
 ```
+
+### Download \& Install
+
+Download the latest version of the module files [here](../../raw/master/bin/Microsoft.VssAdmin.zip)
