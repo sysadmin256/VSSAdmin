@@ -56,4 +56,4 @@ PS> Get-VssShadowCopy -Provider 'Microsoft Software Shadow Copy provider 1.0'
    ![alt text](../../raw/master/docs/img/UnblockZipFile.png "Make sure to unblock the archive before extracting the contents")
 3. Save the module files to one of the directories in your `$env:PSModulePath` variable
    
-   ![alt text](../../raw/master/docs/img/installLocation.png)
+   ![alt text](../../raw/master/docs/img/InstallLocation.png)
