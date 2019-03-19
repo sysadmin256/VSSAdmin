@@ -49,8 +49,11 @@ PS> Get-VssShadowCopy -Provider 'Microsoft Software Shadow Copy provider 1.0'
 
 ### Download \& Install
 
-Download the latest version of the module files [here](../../raw/master/bin/Microsoft.VssAdmin.zip).
+1. Download the latest version of the module files [here](../../raw/master/bin/Microsoft.VssAdmin.zip).
 
-Make sure to unblock the archive before extracting the contents.
+2. Make sure to unblock the archive before extracting the contents.
 
-![alt text](../../raw/master/docs/img/UnblockZipFile.png "Make sure to unblock the archive before extracting the contents")
+   ![alt text](../../raw/master/docs/img/UnblockZipFile.png "Make sure to unblock the archive before extracting the contents")
+3. Save the module files to one of the directories in your `$env:PSModulePath` variable
+   
+   ![alt text](../../raw/master/docs/img/installLocation.png)
